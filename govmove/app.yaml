@@ -1,0 +1,28 @@
+# GovMove Databricks App
+# Replace the values below before deploying to another environment (see README.md).
+command:
+  - streamlit
+  - run
+  - main.py
+
+env:
+  - name: GOVMOVE_CATALOG                 # <catalog_name>
+    value: manual_sandbox_dev
+  - name: GOVMOVE_SCHEMA                  # <schema_name>
+    value: property_prioritisation
+  - name: GOVMOVE_PROPERTY_TABLE          # <property_table_name>
+    value: govmove_property_locations
+  - name: GOVMOVE_POSTCODE_TABLE          # <postcode_lookup_table_name>
+    value: govmove_postcode_centroids
+  - name: GOVMOVE_POSTCODE_FALLBACK_TABLE # <catalog>.<schema>.<address_table>
+    value: address_dev.bronze.addressbasepremium
+  - name: GOVMOVE_EVIDENCE_TABLE          # <evidence_table_name>
+    value: govmove_property_evidence
+  - name: GOVMOVE_PRIORITY_TABLE          # <priority_results_table>
+    value: property_priority_results
+  - name: GOVMOVE_COMPUTE                 # 'serverless' or <cluster_id>
+    value: serverless
+  - name: GOVMOVE_SQL_WAREHOUSE_ID        # <sql_warehouse_id> (data-prep only; optional)
+    value: "<sql_warehouse_id>"
+  - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+    value: "false"

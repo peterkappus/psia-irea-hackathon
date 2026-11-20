@@ -1,0 +1,9 @@
+# Databricks Apps provide Python 3.11 with streamlit, pandas and pydeck pre-installed.
+# Databricks Connect 15.4.10+ (below 16) is the version compatible with Python 3.11 and serverless compute.
+databricks-connect>=15.4.10,<16
+# Keep protobuf below 6: the pre-installed streamlit 1.38 requires protobuf<6.
+protobuf>=5.26,<6
+grpcio>=1.59.3,<1.72
+grpcio-status>=1.59.3,<1.72
+googleapis-common-protos>=1.56.4,<1.71
+# Test-only dependency (not needed at runtime): pytest
