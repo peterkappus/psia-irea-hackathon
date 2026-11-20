@@ -1,57 +1,59 @@
 """GovMove configuration.
 
-CONFIGURATION VALUES TO REPLACE BEFORE DEPLOYMENT
--------------------------------------------------
-Each value can be set as an environment variable in app.yaml (preferred) or edited here.
+LANDING LOCATION (the only values that must be set)
+---------------------------------------------------
+  GOVMOVE_CATALOG   Catalog where the 'GovMove Setup' notebook landed all datasets.   Placeholder: <catalog_name>
+  GOVMOVE_SCHEMA    Schema where the 'GovMove Setup' notebook landed all datasets.    Placeholder: <schema_name>
 
-  GOVMOVE_CATALOG                  Catalog holding the cleaned GovMove tables.        Placeholder: <catalog_name>
-  GOVMOVE_SCHEMA                   Schema holding the cleaned GovMove tables.         Placeholder: <schema_name>
-  GOVMOVE_PROPERTY_TABLE           Cleaned property-location table (data-prep).       Placeholder: <property_table_name>
-  GOVMOVE_POSTCODE_TABLE           Postcode centroid lookup table (data-prep).        Placeholder: <postcode_lookup_table_name>
-  GOVMOVE_POSTCODE_FALLBACK_TABLE  Raw approved address table used if the centroid   Placeholder: <catalog>.<schema>.<address_table>
-                                   table is unavailable (AddressBase Premium).
-  GOVMOVE_COMPUTE                  'serverless' or an all-purpose cluster ID used by  Placeholder: <serverless | cluster_id>
-                                   Databricks Connect (PySpark).
-  GOVMOVE_SQL_WAREHOUSE_ID         SQL warehouse ID used to run the data-prep SQL     Placeholder: <sql_warehouse_id>
-                                   (optional; not used by the app at runtime).
-  GOVMOVE_SOURCE_CATALOG/SCHEMA    Bronze source tables used by the data-prep notebook (property, vacant_space, surplus).
-  GOVMOVE_AVAILABILITY_RULES       Optional JSON overriding AVAILABILITY_RULES below.
+Use the same values as the 'catalog' and 'schema' widgets of the GovMove Setup notebook. Every table the app
+reads is <GOVMOVE_CATALOG>.<GOVMOVE_SCHEMA>.<name>; the names are fixed by the setup notebook:
+  source:   property, building, land, occupation, surplus, vacant_space, addressbasepremium
+  app:      govmove_property_locations, govmove_postcode_centroids, govmove_property_evidence,
+            govmove_property_clean, govmove_building_clean, govmove_land_clean, govmove_occupation_clean
 
-Defaults below point at the development environment this app was built against.
+OPTIONAL
+  GOVMOVE_ADDRESSBASE_TABLE   AddressBase Premium table or view used as the postcode-lookup fallback. A bare name
+                              is resolved in <GOVMOVE_CATALOG>.<GOVMOVE_SCHEMA>; a full catalog.schema.table name
+                              is used as is. Default: addressbasepremium (the view built by the setup notebook).
+                              Placeholder: <catalog>.<schema>.<addressbase_table>
+  GOVMOVE_PRIORITY_TABLE      Full name of property_priority_results from the prioritisation notebook (not a
+                              source dataset). Used by Estate opportunity explorer and Sustainability &
+                              investment prioritisation. Placeholder: <catalog>.<schema>.property_priority_results
+  GOVMOVE_COMPUTE             'serverless' or an all-purpose cluster ID used by Databricks Connect.
+  GOVMOVE_SQL_WAREHOUSE_ID    Optional; not used by the app at runtime.
+  GOVMOVE_AVAILABILITY_RULES  Optional JSON overriding AVAILABILITY_RULES below.
+
+Defaults below are the values for the existing development environment.
 """
 import json
 import os
 
 CATALOG = os.getenv("GOVMOVE_CATALOG", "manual_sandbox_dev")
 SCHEMA = os.getenv("GOVMOVE_SCHEMA", "property_prioritisation")
-PROPERTY_TABLE = os.getenv("GOVMOVE_PROPERTY_TABLE", "govmove_property_locations")
-POSTCODE_TABLE = os.getenv("GOVMOVE_POSTCODE_TABLE", "govmove_postcode_centroids")
-POSTCODE_FALLBACK_TABLE = os.getenv("GOVMOVE_POSTCODE_FALLBACK_TABLE", "address_dev.bronze.addressbasepremium")
 COMPUTE = os.getenv("GOVMOVE_COMPUTE", "serverless")
 SQL_WAREHOUSE_ID = os.getenv("GOVMOVE_SQL_WAREHOUSE_ID", "<sql_warehouse_id>")
-SOURCE_CATALOG = os.getenv("GOVMOVE_SOURCE_CATALOG", "manual_sandbox_dev")
-SOURCE_SCHEMA = os.getenv("GOVMOVE_SOURCE_SCHEMA", "bronze")
+ADDRESSBASE_TABLE = os.getenv("GOVMOVE_ADDRESSBASE_TABLE", "").strip() or "addressbasepremium"
 
 
 def fq(table: str) -> str:
-    """Fully qualify a table name with the configured catalog and schema unless already qualified."""
+    """<GOVMOVE_CATALOG>.<GOVMOVE_SCHEMA>.<table> (names that are already fully qualified are returned unchanged)."""
     return table if table.count(".") == 2 else f"{CATALOG}.{SCHEMA}.{table}"
 
 
-PROPERTY_TABLE_FQ = fq(PROPERTY_TABLE)
-POSTCODE_TABLE_FQ = fq(POSTCODE_TABLE)
+# Source datasets (landed by the GovMove Setup notebook).
+SOURCE_TABLES = {name: fq(name) for name in ("property", "building", "land", "occupation", "surplus", "vacant_space")}
+SOURCE_TABLES["addressbasepremium"] = fq(ADDRESSBASE_TABLE)
 
-# One row per property with related-record counts (built by the data-prep notebook). Placeholder: <evidence_table_name>
-EVIDENCE_TABLE_FQ = fq(os.getenv("GOVMOVE_EVIDENCE_TABLE", "govmove_property_evidence"))
-# Cleaned source tables used by the Estate Intelligence views. Placeholders: <property_clean> etc.
-CLEAN_TABLES = {
-    "property": fq(os.getenv("GOVMOVE_PROPERTY_CLEAN_TABLE", "property_clean")),
-    "building": fq(os.getenv("GOVMOVE_BUILDING_CLEAN_TABLE", "building_clean")),
-    "land": fq(os.getenv("GOVMOVE_LAND_CLEAN_TABLE", "land_clean")),
-    "occupation": fq(os.getenv("GOVMOVE_OCCUPATION_CLEAN_TABLE", "occupation_clean")),
-}
-# Priority scores from the prioritisation notebook (Estate opportunity explorer). Placeholder: <priority_results_table>
-PRIORITY_TABLE_FQ = fq(os.getenv("GOVMOVE_PRIORITY_TABLE", "property_priority_results"))
+# App tables (built by the GovMove Setup notebook in the same schema).
+PROPERTY_TABLE_FQ = fq("govmove_property_locations")
+POSTCODE_TABLE_FQ = fq("govmove_postcode_centroids")
+POSTCODE_FALLBACK_TABLE = SOURCE_TABLES["addressbasepremium"]
+EVIDENCE_TABLE_FQ = fq("govmove_property_evidence")
+CLEAN_TABLES = {name: fq(f"govmove_{name}_clean") for name in ("property", "building", "land", "occupation")}
+
+# Optional output of the prioritisation notebook (not part of the landing schema).
+PRIORITY_TABLE_FQ = os.getenv("GOVMOVE_PRIORITY_TABLE",
+                              "manual_sandbox_dev.property_prioritisation.property_priority_results")
 
 # Availability rules per property dataset. A record counts as 'available' when its
 # availability_status is in default_statuses. Users can explicitly pick other statuses in the UI.

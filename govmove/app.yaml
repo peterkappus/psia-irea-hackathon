@@ -1,25 +1,20 @@
 # GovMove Databricks App
-# Replace the values below before deploying to another environment (see README.md).
+# GOVMOVE_CATALOG / GOVMOVE_SCHEMA must match the 'catalog' / 'schema' widgets used to run the
+# 'GovMove Setup' notebook: every table the app reads lives in <catalog>.<schema> (see config.py).
 command:
   - streamlit
   - run
   - main.py
 
 env:
-  - name: GOVMOVE_CATALOG                 # <catalog_name>
+  - name: GOVMOVE_CATALOG                 # <catalog_name>  (landing catalog)
     value: manual_sandbox_dev
-  - name: GOVMOVE_SCHEMA                  # <schema_name>
+  - name: GOVMOVE_SCHEMA                  # <schema_name>   (landing schema)
     value: property_prioritisation
-  - name: GOVMOVE_PROPERTY_TABLE          # <property_table_name>
-    value: govmove_property_locations
-  - name: GOVMOVE_POSTCODE_TABLE          # <postcode_lookup_table_name>
-    value: govmove_postcode_centroids
-  - name: GOVMOVE_POSTCODE_FALLBACK_TABLE # <catalog>.<schema>.<address_table>
-    value: address_dev.bronze.addressbasepremium
-  - name: GOVMOVE_EVIDENCE_TABLE          # <evidence_table_name>
-    value: govmove_property_evidence
-  - name: GOVMOVE_PRIORITY_TABLE          # <priority_results_table>
-    value: property_priority_results
+  - name: GOVMOVE_ADDRESSBASE_TABLE       # AddressBase Premium table/view: bare name (in landing schema) or <catalog>.<schema>.<table>
+    value: manual_sandbox_dev.property_prioritisation.addressbasepremium
+  - name: GOVMOVE_PRIORITY_TABLE          # optional: <catalog>.<schema>.property_priority_results
+    value: manual_sandbox_dev.property_prioritisation.property_priority_results
   - name: GOVMOVE_COMPUTE                 # 'serverless' or <cluster_id>
     value: serverless
   - name: GOVMOVE_SQL_WAREHOUSE_ID        # <sql_warehouse_id> (data-prep only; optional)
