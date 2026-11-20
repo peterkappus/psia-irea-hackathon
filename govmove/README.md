@@ -133,3 +133,250 @@ pytest -q tests
 ```
 
 The Spark distance tests skip automatically when no Spark session is available.
+
+
+# Property Data, AI and Sustainability Hackathon Context
+
+A hackathon application that brings together government property information to help users understand the estate, identify underused assets, and explore opportunities to improve utilisation and sustainability.
+
+The application combines property, building, occupation, land, contract, vacant-space and surplus records into a single searchable view. It is designed to turn fragmented estate data into practical insights for property teams, analysts and decision-makers.
+
+## The problem
+
+Property information is often spread across several datasets. A user may need to move between property records, building details, occupations, vacant-space listings and surplus-property information before they can understand a site.
+
+This makes it difficult to answer questions such as:
+
+- What buildings and land are associated with a property?
+- Who occupies the property and how much space do they use?
+- Is any space vacant, available or under offer?
+- Has the property, building or land been identified as surplus?
+- What contracts and organisations are associated with the asset?
+- What environmental or energy information is available for the building?
+- Which assets should be investigated first for consolidation, reuse or disposal?
+
+## Our solution
+
+The application creates a joined-up property intelligence experience around a shared set of property and contract references.
+
+Users can:
+
+1. Search and filter the government estate by property, organisation, location and region.
+2. View a consolidated profile of a property and its related records.
+3. Explore buildings, land parcels, occupations, contracts, vacant spaces and surplus assets.
+4. Compare occupied, vacant and surplus space to identify potential underutilisation.
+5. review building-level sustainability indicators, including available EPC, DEC and BREEAM information.
+6. Use AI-assisted summaries and natural-language questions to make complex property data easier to understand.
+7. Highlight potential opportunities for space reuse, estate consolidation, disposal or further sustainability assessment.
+
+> The application supports investigation and prioritisation. It does not replace professional property, legal, valuation, planning, security or sustainability advice.
+
+## Data used
+
+The prototype uses six Excel datasets.
+
+| Dataset | Purpose | Examples of information included |
+|---|---|---|
+| `PropertyContract.xlsx` | Connects properties to contracts and organisations | Property and contract references, sector, parent organisation and organisation |
+| `Building.xlsx` | Describes buildings and their environmental credentials | Floor area, usage, construction date, listed status, BREEAM, DEC and EPC information |
+| `Land.xlsx` | Describes land associated with properties | Land references, area, measurement basis and land usage |
+| `Occupation.xlsx` | Records how property space is occupied | Occupying organisation, occupation details, floor area and related references |
+| `VacantSpace.xlsx` | Identifies vacant and potentially reusable space | Vacant area, measurement units, status, availability dates and descriptions |
+| `Surplus.xlsx` | Identifies property or land in the disposal pipeline | Sale status, surplus land area, surplus floor area, title information and land usage |
+
+The datasets contain shared identifiers such as **Insite Property Reference** and **Insite Contract Reference**. These identifiers allow the application to connect records that describe different aspects of the same asset.
+
+## Conceptual data model
+
+```mermaid
+erDiagram
+    PROPERTY_CONTRACT ||--o{ BUILDING : "Insite Property Reference"
+    PROPERTY_CONTRACT ||--o{ LAND : "Insite Property Reference"
+    PROPERTY_CONTRACT ||--o{ OCCUPATION : "Property / Contract Reference"
+    PROPERTY_CONTRACT ||--o{ VACANT_SPACE : "Property / Contract Reference"
+    PROPERTY_CONTRACT ||--o{ SURPLUS : "Property / Contract Reference"
+
+    PROPERTY_CONTRACT {
+        string property_reference
+        string contract_reference
+        string sector
+        string parent_organisation
+        string organisation
+    }
+    BUILDING {
+        string building_reference
+        number floor_area
+        string usage
+        string breeam_rating
+        string dec_rating
+        string epc_rating
+    }
+    LAND {
+        string land_reference
+        number land_area
+        string land_usage
+    }
+    OCCUPATION {
+        string occupation_reference
+        number occupied_area
+        string occupying_organisation
+    }
+    VACANT_SPACE {
+        string vacant_space_reference
+        number vacant_area
+        string vacancy_status
+        date available_from
+    }
+    SURPLUS {
+        string disposal_reference
+        string sale_status
+        number surplus_land_area
+        number surplus_floor_area
+    }
+```
+
+The diagram is conceptual. Exact relationship cardinality and data quality should be confirmed during production data modelling.
+
+## Key application journeys
+
+### 1. Estate overview
+
+The overview presents high-level information about the property portfolio, for example:
+
+- properties and buildings by region;
+- floor and land area;
+- occupied, vacant and surplus space;
+- vacant-space status;
+- surplus sale status;
+- organisations represented in the data; and
+- availability of EPC, DEC and BREEAM information.
+
+### 2. Property search
+
+Users can narrow the estate using fields such as:
+
+- property name or reference;
+- postcode, town, local authority or region;
+- sector, parent organisation or organisation;
+- building or land use;
+- vacant-space status;
+- surplus sale status; and
+- security classification.
+
+### 3. Property profile
+
+A property profile brings associated records together in one place:
+
+- address and geographical information;
+- owning or responsible organisations;
+- contracts;
+- buildings and floor areas;
+- land records;
+- occupations;
+- vacant spaces;
+- surplus or disposal records; and
+- sustainability and energy-certificate fields.
+
+### 4. AI-assisted exploration
+
+The AI layer is intended to make the estate data easier to interrogate. Example questions include:
+
+- "Show vacant office space in Yorkshire and the Humber."
+- "Summarise this property's buildings, occupations and vacant space."
+- "Which properties have both vacant space and a surplus record?"
+- "Which large buildings do not have a recorded EPC or DEC rating?"
+- "Where could consolidation or reuse be investigated?"
+
+AI-generated responses should explain the records used and distinguish source facts from inferred opportunities.
+
+### 5. Sustainability opportunities
+
+The application can help teams identify candidates for further review, including:
+
+- buildings with missing or expired energy information;
+- large floor areas with no recorded EPC, DEC or BREEAM result;
+- properties with both occupied and vacant space;
+- vacant buildings that may be suitable for reuse before new space is acquired;
+- surplus assets where reuse and disposal options should be compared; and
+- potential consolidation opportunities within the same location or organisation.
+
+These are indicators for investigation, not automated decisions.
+
+## Example opportunity logic
+
+A simple prioritisation model can combine several transparent indicators:
+
+| Indicator | Example interpretation |
+|---|---|
+| High vacant area | Potential reuse, subletting or consolidation opportunity |
+| Vacant and surplus records both present | Review the intended asset strategy and disposal status |
+| High floor area and missing EPC/DEC | Prioritise data improvement or an energy assessment |
+| Several occupations at one property | Check whether space is being shared efficiently |
+| Availability date has passed | Confirm whether the vacancy is still current |
+| Zero or missing area values | Flag the record for data-quality review |
+
+Any score should remain explainable, configurable and reviewable by a property professional.
+
+## Data-quality considerations
+
+The source files demonstrate several issues that a production implementation should handle explicitly:
+
+- blank and zero area values;
+- different area measurement standards and units;
+- repeated records for the same property or building;
+- inconsistent naming and capitalisation;
+- dates that may be missing, historic or incorrectly formatted;
+- properties with coordinates but incomplete addresses;
+- multiple records linked to one property or contract; and
+- certificate fields that may be absent even when a building exists.
+
+Recommended controls include schema validation, reference-integrity checks, unit normalisation, duplicate detection, date validation and clear reporting of missing data.
+
+## Responsible AI and governance
+
+The application should follow these principles:
+
+- **Grounded responses:** AI answers should be based on retrieved property records.
+- **Traceability:** Users should be able to see which records support an answer.
+- **Human review:** Recommendations must be reviewed before operational decisions are made.
+- **Explainability:** Opportunity flags and scores should expose the underlying rules.
+- **Security:** Respect the source security classification and the user's access permissions.
+- **Data minimisation:** Send only the data needed for the user's question to an AI service.
+- **No unsupported claims:** Missing information must be reported as missing rather than guessed.
+- **Monitoring:** Record feedback, errors and model behaviour to support continuous improvement.
+
+
+
+## Testing
+
+A production-ready version should include:
+
+- schema tests for each input file;
+- relationship tests for shared property and contract references;
+- tests for area and date normalisation;
+- duplicate and null-value checks;
+- permission and security-classification tests;
+- grounded-AI evaluation questions with expected source records; and
+- user-acceptance tests for search, filtering and property summaries.
+
+## Future development
+
+Potential next steps include:
+
+- interactive mapping and spatial clustering;
+- automated data-quality reporting;
+- configurable opportunity scoring;
+- carbon and energy benchmarks;
+- certificate-expiry alerts;
+- integration with authoritative property systems and APIs;
+- scenario modelling for consolidation and reuse;
+- feedback capture for AI answers; and
+- exportable property briefing packs.
+
+## Project status
+
+This repository contains a hackathon prototype. Before production use, the solution will require formal assurance covering data ownership, security, accessibility, architecture, operational support, AI governance and user testing.
+
+## Licence
+
+Add the agreed repository licence here. For an open-source repository, include a `LICENSE` file and confirm that the source datasets can legally be redistributed.
